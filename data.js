@@ -1867,6 +1867,7 @@ const initialData = {
   { codigo: '80142', produto: `QUEIJO PARMESAO RALADO`, quantidade: ' ' },
   { codigo: '120029', produto: `CREME LEITE PO MELOCREME 5430`, quantidade: ' ' },
   { codigo: '120030', produto: `COMPOSTO LÁCTEO`, quantidade: ' ' },
+  { codigo: '1002054', produto: `SAL NAO IODADO USO ALIMENTICIO`, quantidade: ' ' },
   ],
   "highlights": []
 };
