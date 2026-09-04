@@ -1193,3 +1193,154 @@ body {
     66% { content: "Carregando.."; }
     100% { content: "Carregando..."; }
 }
+
+/* =====================================================================
+   IDENTIDADE VISUAL POR CATEGORIA DE MATERIAL
+   Cada material recebe um ícone (caixa, rótulo, tampa, alho, cebola...)
+   aplicado como marca d'água discreta no card do catálogo.
+   ===================================================================== */
+
+/* Cor da categoria: cada card sobrescreve via --cat-color (inline). */
+.product-card {
+    --cat-color: var(--text-muted);
+    isolation: isolate;
+}
+
+/* Faixa lateral sutil na cor da categoria */
+.product-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: var(--cat-color);
+    opacity: 0.55;
+    border-radius: 18px 0 0 18px;
+    transition: opacity 0.25s ease, width 0.25s ease;
+}
+
+.product-card:hover::before {
+    opacity: 1;
+    width: 6px;
+}
+
+/* Marca d'água: ícone grande, translúcido, sangrando no canto inferior direito */
+.card-watermark {
+    position: absolute;
+    right: -14px;
+    bottom: -18px;
+    width: 108px;
+    height: 108px;
+    color: var(--cat-color);
+    opacity: 0.09;
+    pointer-events: none;
+    z-index: 0;
+    transition: opacity 0.25s ease, transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-watermark .cat-icon {
+    width: 100%;
+    height: 100%;
+    display: block;
+    stroke-width: 2.2;
+}
+
+.product-card:hover .card-watermark {
+    opacity: 0.16;
+    transform: translateY(-4px) rotate(-4deg) scale(1.04);
+}
+
+.theme-dark .card-watermark {
+    opacity: 0.13;
+}
+
+.theme-dark .product-card:hover .card-watermark {
+    opacity: 0.22;
+}
+
+/* Conteúdo do card fica sempre acima da marca d'água */
+.card-body {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.card-body .card-name {
+    flex: 1;
+}
+
+/* Etiqueta discreta de categoria abaixo do nome */
+.card-cat-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 0.7rem;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--cat-color);
+    opacity: 0.75;
+    width: fit-content;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cat-icon-mini {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    stroke-width: 3.4;
+}
+
+.theme-dark .card-cat-tag {
+    opacity: 0.9;
+}
+
+/* Card com padding extra à esquerda por causa da faixa de categoria */
+.product-card {
+    padding-left: 1.45rem;
+}
+
+/* --- Barra de filtros por categoria (agora com mais opções) --- */
+.header-filters {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    max-width: 100%;
+    scrollbar-width: thin;
+}
+
+.header-filters::-webkit-scrollbar {
+    height: 4px;
+}
+
+.header-filters::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+}
+
+.filter-btn {
+    --cat-color: var(--brand-red);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.filter-btn.active {
+    color: var(--cat-color);
+}
+
+.section-header {
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+    .header-filters {
+        width: 100%;
+    }
+}

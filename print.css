@@ -47,23 +47,104 @@
     z-index: 2100;
 }
 
-/* --- FOLHA 3D (SHEET-VIEWPORT) --- */
+/* --- FOLHA 3D (SHEET-VIEWPORT) ---
+   Um bloco de papel de verdade: frente e verso separados pela espessura,
+   e QUATRO faces laterais fechando o volume. Sem as laterais, aumentar a
+   espessura faria as duas faces parecerem folhas soltas. */
 .sheet-viewport {
+    /* Espessura do bloco — único valor a mexer para engrossar/afinar */
+    --paper: 3mm;
+    --half-paper: calc(var(--paper) / 2);
+
     width: 297mm;
     height: 210mm;
+    /* As faces são absolutas, então o bloco não tem conteúdo em fluxo:
+       sem isto o flex da overlay o esmagaria na vertical. O ajuste de
+       tamanho na tela é feito pelo scale(), não pelo flex. */
+    flex: 0 0 auto;
     position: relative;
     transform-style: preserve-3d;
     --sheet-zoom: 0.6;
-    /* Grossura da lateral */
-    background: #bbb; 
-    /* Margem branca que faz parte do objeto 3D */
-    border: 15px solid white;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    background: transparent;
+    border: none;
+    box-shadow: 0 22px 55px rgba(0, 0, 0, 0.5);
+}
+
+/* --- FACES: FRENTE E VERSO --- */
+.sheet-front,
+.sheet-back {
+    position: absolute;
+    inset: 0;
+    background: #ffffff;
+    backface-visibility: hidden;
+}
+
+/* A margem branca em volta do formulário é o papel aparecendo */
+.sheet-front {
+    padding: 4mm;
+    transform: translateZ(var(--half-paper));
+}
+
+.sheet-back {
+    background-image: url('https://i.ibb.co/gMs3wh6q/Untitled.png');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 200px; /* tamanho da imagem */
+    transform: rotateY(180deg) translateZ(var(--half-paper));
+}
+
+/* --- FACES LATERAIS (a espessura visível) ---
+   Cada uma nasce colada na borda do bloco e é girada 90° para dentro,
+   cobrindo exatamente de +metade a -metade da espessura. O degradê vai do
+   claro (frente) ao escuro (verso), dando volume ao papel. */
+.sheet-edge {
+    position: absolute;
+    display: block;
+    background: #f0efec;
+}
+
+.edge-right {
+    top: 0;
+    left: 100%;
+    width: var(--paper);
+    height: 100%;
+    transform-origin: left center;
+    transform: translateZ(var(--half-paper)) rotateY(90deg);
+    background: linear-gradient(to right, #fbfbf9, #c9c8c3);
+}
+
+.edge-left {
+    top: 0;
+    right: 100%;
+    width: var(--paper);
+    height: 100%;
+    transform-origin: right center;
+    transform: translateZ(var(--half-paper)) rotateY(-90deg);
+    background: linear-gradient(to left, #fbfbf9, #c9c8c3);
+}
+
+.edge-top {
+    left: 0;
+    bottom: 100%;
+    width: 100%;
+    height: var(--paper);
+    transform-origin: center bottom;
+    transform: translateZ(var(--half-paper)) rotateX(90deg);
+    background: linear-gradient(to top, #fdfdfb, #d2d1cc);
+}
+
+.edge-bottom {
+    left: 0;
+    top: 100%;
+    width: 100%;
+    height: var(--paper);
+    transform-origin: center top;
+    transform: translateZ(var(--half-paper)) rotateX(-90deg);
+    background: linear-gradient(to bottom, #f4f3f0, #bfbeb9);
 }
 
 
-
-/* --- CONTEÚDO DA ETIQUETA (INTOCADO) --- */
+/* --- CONTEÚDO DA ETIQUETA (dentro da face da frente) --- */
 .official-sheet {
     width: 100%;
     height: 100%;
@@ -75,24 +156,6 @@
     background: white;
     position: relative;
     z-index: 2;
-    transform: translateZ(1px);
-    /* Eleva a frente para criar relevo */
-    backface-visibility: hidden;
-    /* Esconde a frente quando virar de costas */
-}
-
-
-.sheet-viewport::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: white;
-    background-image: url('https://i.ibb.co/gMs3wh6q/Untitled.png');
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: 200px; /* tamanho da imagem */
-    transform: translateZ(-4px) rotateY(180deg);
-    border: 1px solid #ddd;
 }
 
 .tbl-row {
@@ -395,22 +458,36 @@
     }
 
     .sheet-viewport {
-        transform: scale(1) !important;
         width: 297mm !important;
         height: 210mm !important;
-        padding: 5mm !important;
+        padding: 0 !important;
         box-shadow: none !important;
         margin: 0 !important;
-        border: none !important; /* Remove a margem branca no papel */
+        border: none !important;
         transform: scale(1) !important;
+        transform-style: flat !important;
         background: white !important;
     }
 
-  .official-sheet {
-    /* ... manter estilos anteriores ... */
-    transform: translateZ(1px);
-    backface-visibility: hidden;
-}
+    /* No papel não existe 3D: sem transform, o texto sai nítido */
+    .sheet-front {
+        position: absolute !important;
+        inset: 0 !important;
+        padding: 5mm !important;
+        transform: none !important;
+        backface-visibility: visible !important;
+    }
+
+    .official-sheet {
+        transform: none !important;
+        backface-visibility: visible;
+    }
+
+    /* Verso e laterais nunca vão para a impressora */
+    .sheet-back,
+    .sheet-edge {
+        display: none !important;
+    }
 
     .grid-values-row {
         height: 70mm !important;
@@ -418,5 +495,45 @@
 
     .big-content-row {
         height: 72mm !important;
+    }
+}
+
+/* =====================================================================
+   MARCA D'ÁGUA DA FOLHA DE IDENTIFICAÇÃO
+   Ícone da categoria do material (caixa, rótulo, tampa, alho, cebola...)
+   impresso bem clarinho atrás do conteúdo, sem competir com os dados.
+   ===================================================================== */
+.sheet-watermark {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    /* Fica atrás do conteúdo, mas acima do fundo branco da folha */
+    z-index: -1;
+}
+
+.sheet-watermark-icon {
+    width: 115mm;
+    height: 115mm;
+    color: #000;
+    opacity: 0.065;
+    stroke-width: 1.8;
+    /* Levemente acima do centro: o miolo da folha é a área do código */
+    margin-top: -12mm;
+}
+
+/* Sem categoria identificada: não desenha nada */
+.sheet-watermark:empty {
+    display: none;
+}
+
+@media print {
+    .sheet-watermark-icon {
+        /* Garante que o navegador não descarte o traço claro na impressão */
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        opacity: 0.085;
     }
 }

@@ -297,7 +297,18 @@
             </div>
         </div>
         <div class="sheet-viewport">
+            <!-- Espessura do papel: as 4 faces laterais fecham o volume -->
+            <span class="sheet-edge edge-top" aria-hidden="true"></span>
+            <span class="sheet-edge edge-bottom" aria-hidden="true"></span>
+            <span class="sheet-edge edge-left" aria-hidden="true"></span>
+            <span class="sheet-edge edge-right" aria-hidden="true"></span>
+            <!-- Verso da folha -->
+            <div class="sheet-back" aria-hidden="true"></div>
+            <!-- Frente da folha (o branco em volta é a margem do papel) -->
+            <div class="sheet-front">
             <div class="official-sheet">
+                <!-- Marca d'água por categoria do material (impressa junto com a folha) -->
+                <div class="sheet-watermark" id="sheet-watermark" aria-hidden="true"></div>
                 <div class="tbl-row header-row">
                     <div class="tbl-cell logo-cell"><img src="logo.png" alt="Wilson"></div>
                     <div class="tbl-cell title-cell">SISTEMA DE GESTÃO DA QUALIDADE E SEGURANÇA DE ALIMENTOS</div>
@@ -351,7 +362,8 @@
                     <div class="tbl-cell daylot-cell" id="print-day-lot" contenteditable="true"
                         style="width: 150px; border-left: 1px solid black;"></div>
                 </div>
-                
+
+            </div>
             </div>
         </div>
     </div>
@@ -386,6 +398,7 @@
     <!-- Notificações (Toast) -->
     <div id="toast-container" class="toast-container"></div>
 
+    <script src="categorias.js"></script>
     <script src="data.js"></script>
     <script src="script.js"></script>
 </body>

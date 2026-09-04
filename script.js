@@ -56,7 +56,8 @@ async function loadData() {
                 }));
                 highlights = data.highlights;
                 localStorage.setItem('wilson_db_cache', JSON.stringify({ products, highlights }));
-                render();
+                setupFilters();
+                render(searchInput ? searchInput.value : '');
                 updateStats();
             }
         }
@@ -87,24 +88,55 @@ function updateStats() {
     document.getElementById('stat-session').textContent = sessionStorage.getItem('print_count') || 0;
 }
 
+// Cache de categoria por código, para não reclassificar a cada render.
+const categoryCache = new Map();
+
+function categoryOf(product) {
+    if (!product) return null;
+    if (typeof getProductCategory !== 'function') return null;
+    const key = product.codigo + '|' + product.produto;
+    if (!categoryCache.has(key)) categoryCache.set(key, getProductCategory(product.produto));
+    return categoryCache.get(key);
+}
+
+// Filtros gerados a partir das categorias realmente presentes na base,
+// ordenados por volume — as mais usadas aparecem primeiro.
 function setupFilters() {
-    const filters = [
-        { id: 'all', label: 'Todos' },
-        { id: 'cx', label: 'Caixas', keywords: ['CX'] },
-        { id: 'frascos', label: 'Frascos', keywords: ['FRASCO'] },
-        { id: 'mp', label: 'Matéria Prima', keywords: ['AROMA', 'CORANTE', 'POLPA', 'AMIDO', 'SAL', 'AÇUCAR', 'VINAGRE'] }
-    ];
+    const counts = new Map();
+    products.forEach(p => {
+        const cat = categoryOf(p);
+        if (!cat) return;
+        if (!counts.has(cat.id)) counts.set(cat.id, { cat, total: 0 });
+        counts.get(cat.id).total++;
+    });
+
+    const filters = [{ id: 'all', label: 'Todos', color: null }];
+    [...counts.values()]
+        .filter(entry => entry.cat.id !== 'geral')
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 10)
+        .forEach(entry => filters.push({
+            id: entry.cat.id,
+            label: entry.cat.label,
+            color: entry.cat.color,
+            total: entry.total
+        }));
+
+    // Se o filtro ativo saiu da lista (base mudou), volta para "Todos".
+    if (!filters.some(f => f.id === currentFilter)) currentFilter = 'all';
 
     filterContainer.innerHTML = '';
     filters.forEach(f => {
         const btn = document.createElement('button');
         btn.className = `filter-btn ${currentFilter === f.id ? 'active' : ''}`;
         btn.textContent = f.label;
+        if (f.color) btn.style.setProperty('--cat-color', f.color);
+        if (f.total) btn.title = `${f.total} materiais`;
         btn.onclick = () => {
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             currentFilter = f.id;
-            render();
+            render(searchInput ? searchInput.value : '');
         };
         filterContainer.appendChild(btn);
     });
@@ -124,13 +156,9 @@ function render(query = '') {
         if (!matchesQuery) return false;
 
         if (currentFilter === 'all') return true;
-        if (currentFilter === 'cx') return p.produto.includes('CX');
-        if (currentFilter === 'frascos') return p.produto.includes('FRASCO');
-        if (currentFilter === 'mp') {
-            const mpKeywords = ['AROMA', 'CORANTE', 'POLPA', 'AMIDO', 'SAL', 'AÇUCAR', 'VINAGRE'];
-            return mpKeywords.some(k => p.produto.includes(k));
-        }
-        return true;
+
+        const cat = categoryOf(p);
+        return !!cat && cat.id === currentFilter;
     });
 
     filtered.sort((a, b) => a.produto.localeCompare(b.produto));
@@ -161,14 +189,31 @@ function createCard(p) {
     div.className = 'product-card zoom-anim';
     if (highlights.includes(p.codigo)) div.classList.add('is-highlight');
     div.dataset.id = p.codigo;
-    
+
+    // Identidade visual do material: ícone de fundo + etiqueta de categoria
+    const cat = categoryOf(p);
+    if (cat) {
+        div.dataset.cat = cat.id;
+        div.style.setProperty('--cat-color', cat.color);
+    }
+    const watermark = cat
+        ? `<div class="card-watermark" aria-hidden="true">${buildCategorySvg(cat, 'cat-icon')}</div>`
+        : '';
+    const catTag = cat
+        ? `<span class="card-cat-tag">${buildCategorySvg(cat, 'cat-icon-mini')}${cat.label}</span>`
+        : '';
+
     // Layout estruturado para a badge ficar bonita no canto
     div.innerHTML = `
-        <div class="card-header-info">
-            <span class="card-code">#${p.codigo}</span>
-            ${(p.quantidade && p.quantidade.trim() !== "") ? `<span class="badge-qty-card">${p.quantidade}</span>` : ''}
+        ${watermark}
+        <div class="card-body">
+            <div class="card-header-info">
+                <span class="card-code">#${p.codigo}</span>
+                ${(p.quantidade && p.quantidade.trim() !== "") ? `<span class="badge-qty-card">${p.quantidade}</span>` : ''}
+            </div>
+            <h3 class="card-name">${p.produto}</h3>
+            ${catTag}
         </div>
-        <h3 class="card-name">${p.produto}</h3>
         ${highlights.includes(p.codigo) ? '<i class="ri-star-fill card-star"></i>' : ''}
     `;
     return div;
@@ -421,6 +466,8 @@ function generatePrint() {
     document.getElementById('box-rec').classList.toggle('checked', opType === 'recebimento');
     document.getElementById('box-dev').classList.toggle('checked', opType === 'devolucao');
 
+    applySheetWatermark(selectedProduct);
+
     closeModal();
     printArea.classList.remove('hidden');
     
@@ -429,6 +476,22 @@ function generatePrint() {
     updateStats();
 
     setTimeout(adjustProductFontSize, 10);
+}
+
+// Desenha no fundo da folha o ícone da categoria do material, como marca d'água.
+function applySheetWatermark(product) {
+    const holder = document.getElementById('sheet-watermark');
+    if (!holder) return;
+
+    const cat = categoryOf(product);
+    if (!cat) {
+        holder.innerHTML = '';
+        holder.removeAttribute('data-cat');
+        return;
+    }
+
+    holder.dataset.cat = cat.id;
+    holder.innerHTML = buildCategorySvg(cat, 'sheet-watermark-icon');
 }
 
 function getDayOfYear() {
@@ -492,8 +555,12 @@ function physicsLoop() {
 }
 physicsLoop();
 
+// Áreas que iniciam o giro: o fundo, o bloco de papel e suas faces/laterais
+// (a margem branca agora pertence à face da frente, não mais ao viewport).
+const DRAG_HANDLES = '.sheet-viewport, .sheet-front, .sheet-back, .sheet-edge';
+
 overlay.addEventListener('mousedown', (e) => {
-    if (e.target === overlay || e.target === sheet) {
+    if (e.target === overlay || e.target.matches(DRAG_HANDLES)) {
         isDragging = true;
         startX = e.clientX; startY = e.clientY;
         if (sheet) sheet.style.transition = "none";
